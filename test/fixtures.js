@@ -1,40 +1,83 @@
-// const { Contract, utils } = require('ethers');
-const { deployContract } = require('ethereum-waffle');
-const { deployments } = require('hardhat');
+const { deployments } = require("hardhat");
+const { utils } = require("ethers");
 
 const xInchFixture = deployments.createFixture(async ({ ethers }, options) => {
-	const [deployer, user1, user2] = await ethers.getSigners();
+  const accounts = await ethers.getSigners();
+  const [deployer, user1, user2] = accounts;
 
-	const OneInch = await ethers.getContractFactory('MockOneInch');
-	const oneInch = await OneInch.deploy();
+  const OneInch = await ethers.getContractFactory("MockOneInch");
+  const oneInch = await OneInch.deploy();
 
-	const StakedOneInch = await ethers.getContractFactory('MockStakedOneInch');
-	const stakedOneInch = await StakedOneInch.deploy();
+  const GovernanceMothership = await ethers.getContractFactory(
+    "MockGovernanceMothership"
+  );
+  const governanceMothership = await GovernanceMothership.deploy(
+    oneInch.address
+  );
 
-	const GovernanceMothership = await ethers.getContractFactory('MockGovernanceMothership');
-	const governanceMothership = await GovernanceMothership.deploy();
+  const FactoryGovernance = await ethers.getContractFactory(
+    "MockFactoryGovernance"
+  );
+  const factoryGovernance = await FactoryGovernance.deploy();
 
-	const KyberNetworkProxy = await ethers.getContractFactory('MockKyberNetworkProxy');
-	const kyberNetworkProxy = await KyberNetworkProxy.deploy();
+  const GovernanceRewards = await ethers.getContractFactory(
+    "MockGovernanceRewards"
+  );
+  const governanceRewards = await GovernanceRewards.deploy(oneInch.address);
 
-	const xINCH = await ethers.getContractFactory('xINCH');
-	const xinch = await xINCH.deploy();
+  const ExchangeGovernance = await ethers.getContractFactory(
+    "MockExchangeGovernance"
+  );
+  const exchangeGovernance = await ExchangeGovernance.deploy();
 
-	const xINCHProxy = await ethers.getContractFactory('xINCHProxy');
-	const xinchProxy = await xINCHProxy.deploy(xinch.address, deployer.address, user1.address, user2.address);
-	const xinchProxyCast = await ethers.getContractAt('xINCH', xinchProxy.address);
+  const KyberNetworkProxy = await ethers.getContractFactory(
+    "MockKyberNetworkProxy"
+  );
+  const kyberNetworkProxy = await KyberNetworkProxy.deploy(oneInch.address);
 
-	await xinchProxyCast.initialize(
-		'xINCHa',
-		oneInch.address,
-		stakedOneInch.address,
-		governanceMothership.address,
-		kyberNetworkProxy.address
-	);
+  const xINCH = await ethers.getContractFactory("xINCH");
+  const xinch = await xINCH.deploy();
 
-	return {
-		xinch: xinchProxyCast,
-	};
+  const xINCHProxy = await ethers.getContractFactory("xINCHProxy");
+  const xinchProxy = await xINCHProxy.deploy(xinch.address, user2.address); // transfer ownership to multisig
+  const xinchProxyCast = await ethers.getContractAt(
+    "xINCH",
+    xinchProxy.address
+  );
+
+  const FEE_DIVISORS = {
+    MINT_FEE: "500",
+    BURN_FEE: "500",
+    CLAIM_FEE: "100",
+  };
+
+  await xinchProxyCast.initialize(
+    "xINCHa",
+    oneInch.address,
+    governanceMothership.address,
+    kyberNetworkProxy.address,
+    FEE_DIVISORS.MINT_FEE,
+    FEE_DIVISORS.BURN_FEE,
+    FEE_DIVISORS.CLAIM_FEE
+  );
+
+  await xinchProxyCast.approveInch(governanceMothership.address);
+  await xinchProxyCast.approveInch(kyberNetworkProxy.address);
+
+  await xinchProxyCast.setFactoryGovernanceAddress(factoryGovernance.address);
+  await xinchProxyCast.setGovernanceRewardsAddress(governanceRewards.address);
+  await xinchProxyCast.setExchangeGovernanceAddress(exchangeGovernance.address);
+
+  await oneInch.transfer(kyberNetworkProxy.address, utils.parseEther("100"));
+  await oneInch.transfer(deployer.address, utils.parseEther("100"));
+  await oneInch.transfer(governanceRewards.address, utils.parseEther("10"));
+
+  return {
+    xinch: xinchProxyCast,
+    inch: oneInch,
+    accounts,
+    FEE_DIVISORS,
+  };
 });
 
 module.exports = { xInchFixture };
