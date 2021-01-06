@@ -33,9 +33,6 @@ interface IKyberNetworkProxy {
     ) external payable returns (uint256);
 }
 
-// question: role of new module? https://etherscan.io/address/0xb33839e05ce9fc53236ae325324a27612f4d110d#code
-// do we need pool governance
-
 contract xINCH is
     Initializable,
     ERC20UpgradeSafe,
@@ -53,7 +50,7 @@ contract xINCH is
     uint256 public adminActiveTimestamp;
 
     IKyberNetworkProxy private kyberNetworkProxy;
-    IERC20 private oneInch; // change to type address?
+    IERC20 private oneInch;
 
     IMooniswapFactoryGovernance private factoryGovernance;
     IGovernanceMothership private governanceMothership;
@@ -97,6 +94,10 @@ contract xINCH is
         _setFeeDivisors(_mintFeeDivisor, _burnFeeDivisor, _claimFeeDivisor);
     }
 
+    /*
+     * @dev Mint xINCH using ETH
+     * @param minRate: Kyber min rate ETH=>INCH
+     */
     function mint(uint256 minRate) external payable whenNotPaused {
         require(msg.value > 0, "Must send ETH");
 
@@ -109,6 +110,10 @@ contract xINCH is
         return _mintInternal(incrementalOneInch);
     }
 
+    /*
+     * @dev Mint xINCH using INCH
+     * @param oneInchAmount: INCH tokens to contribute
+     */
     function mintWithToken(uint256 oneInchAmount) external whenNotPaused {
         require(oneInchAmount > 0, "Must send token");
         oneInch.safeTransferFrom(msg.sender, address(this), oneInchAmount);
@@ -126,6 +131,13 @@ contract xINCH is
         return super._mint(msg.sender, mintAmount);
     }
 
+    /*
+     * @dev Burn xINCH tokens
+     * @notice Will fail if pro rata balance exceeds available liquidity
+     * @param tokenAmount: xINCH tokens to burn
+     * @param redeemForEth: Redeem for ETH or INCH
+     * @param minRate: Kyber min rate INCH=>ETH
+     */
     function burn(
         uint256 tokenAmount,
         bool redeemForEth,
@@ -185,12 +197,18 @@ contract xINCH is
     function getBufferBalance() public view returns (uint256) {
         return oneInch.balanceOf(address(this)).sub(withdrawableOneInchFees);
     }
-
+    
+    /*
+     * @dev Admin function for claiming INCH rewards
+     */
     function getReward() external onlyOwnerOrManager {
         _certifyAdmin();
         _getReward();
     }
 
+    /*
+     * @dev Public callable function for claiming INCH rewards
+     */
     function getRewardExternal() external {
         _getReward();
     }
@@ -212,10 +230,16 @@ contract xINCH is
         governanceMothership.stake(_amount);
     }
 
+    /*
+     * @dev Admin function for unstaking beyond the scope of a rebalance
+     */
     function adminUnstake(uint256 _amount) external onlyOwnerOrManager {
         _unstake(_amount);
     }
 
+    /*
+     * @dev Public callable function for unstaking in event of admin failure/incapacitation
+     */
     function emergencyUnstake(uint256 _amount) external {
         require(
             adminActiveTimestamp.add(LIQUIDATION_TIME_PERIOD) < block.timestamp,
@@ -232,17 +256,24 @@ contract xINCH is
         governanceMothership.unstake(_amount);
     }
 
+    /*
+     * @dev Admin function for collecting reward and restoring target buffer balance
+     */
     function rebalance() external onlyOwnerOrManager {
         _certifyAdmin();
         _getReward();
         _rebalance();
     }
 
+    /*
+     * @dev Public callable function for collecting reward and restoring target buffer balance
+     */
     function rebalanceExternal() external {
         require(
             adminActiveTimestamp.add(LIQUIDATION_TIME_PERIOD) > block.timestamp,
             "Liquidation time elapsed; no more staking"
         );
+        _getReward();
         _rebalance();
     }
 
@@ -390,6 +421,11 @@ contract xINCH is
         return true;
     }
 
+    /*
+     * @notice Registers that admin is present and active
+     * @notice If admin isn't certified within liquidation time period,
+     * emergencyUnstake function becomes callable
+     */
     function _certifyAdmin() private {
         adminActiveTimestamp = block.timestamp;
     }
