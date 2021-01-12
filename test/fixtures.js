@@ -30,10 +30,10 @@ const xInchFixture = deployments.createFixture(async ({ ethers }, options) => {
   );
   const exchangeGovernance = await ExchangeGovernance.deploy();
 
-  const KyberNetworkProxy = await ethers.getContractFactory(
-    "MockKyberNetworkProxy"
+  const OneInchLiquidityProtocol = await ethers.getContractFactory(
+    "MockOneInchLiquidityProtocol"
   );
-  const kyberNetworkProxy = await KyberNetworkProxy.deploy(oneInch.address);
+  const oneInchLiquidityProtocol = await OneInchLiquidityProtocol.deploy(oneInch.address);
 
   const xINCH = await ethers.getContractFactory("xINCH");
   const xinch = await xINCH.deploy();
@@ -55,20 +55,20 @@ const xInchFixture = deployments.createFixture(async ({ ethers }, options) => {
     "xINCHa",
     oneInch.address,
     governanceMothership.address,
-    kyberNetworkProxy.address,
+    oneInchLiquidityProtocol.address,
     FEE_DIVISORS.MINT_FEE,
     FEE_DIVISORS.BURN_FEE,
     FEE_DIVISORS.CLAIM_FEE
   );
 
   await xinchProxyCast.approveInch(governanceMothership.address);
-  await xinchProxyCast.approveInch(kyberNetworkProxy.address);
+  await xinchProxyCast.approveInch(oneInchLiquidityProtocol.address);
 
   await xinchProxyCast.setFactoryGovernanceAddress(factoryGovernance.address);
   await xinchProxyCast.setGovernanceRewardsAddress(governanceRewards.address);
   await xinchProxyCast.setExchangeGovernanceAddress(exchangeGovernance.address);
 
-  await oneInch.transfer(kyberNetworkProxy.address, utils.parseEther("100"));
+  await oneInch.transfer(oneInchLiquidityProtocol.address, utils.parseEther("100"));
   await oneInch.transfer(deployer.address, utils.parseEther("100"));
   await oneInch.transfer(governanceRewards.address, utils.parseEther("10"));
 

@@ -12,26 +12,7 @@ import "./interface/IExchangeGovernance.sol";
 import "./interface/IGovernanceMothership.sol";
 import "./interface/IMooniswapPoolGovernance.sol";
 import "./interface/IMooniswapFactoryGovernance.sol";
-
-interface IKyberNetworkProxy {
-    function swapEtherToToken(ERC20UpgradeSafe token, uint256 minConversionRate)
-        external
-        payable
-        returns (uint256);
-
-    function swapTokenToToken(
-        ERC20UpgradeSafe src,
-        uint256 srcAmount,
-        ERC20UpgradeSafe dest,
-        uint256 minConversionRate
-    ) external returns (uint256);
-
-    function swapTokenToEther(
-        ERC20UpgradeSafe token,
-        uint256 tokenQty,
-        uint256 minRate
-    ) external payable returns (uint256);
-}
+import "./interface/IOneInchLiquidityProtocol.sol";
 
 contract xINCH is
     Initializable,
@@ -48,17 +29,23 @@ contract xINCH is
     uint256 private constant MAX_UINT = 2**256 - 1;
 
     uint256 public adminActiveTimestamp;
+    uint256 public withdrawableOneInchFees;
 
-    IKyberNetworkProxy private kyberNetworkProxy;
     IERC20 private oneInch;
 
+    IOneInchLiquidityProtocol private oneInchLiquidityProtocol;
     IMooniswapFactoryGovernance private factoryGovernance;
     IGovernanceMothership private governanceMothership;
     IExchangeGovernance private exchangeGovernance;
     IGovernanceRewards private governanceRewards;
 
+    address private oneInchExchange;
+
     address private manager;
     address private manager2;
+
+    address private constant ETH_ADDRESS =
+        0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     struct FeeDivisors {
         uint256 mintFee;
@@ -68,8 +55,6 @@ contract xINCH is
 
     FeeDivisors public feeDivisors;
 
-    uint256 public withdrawableOneInchFees;
-
     event Rebalance();
     event FeeDivisorsSet(uint256 mintFee, uint256 burnFee, uint256 claimFee);
     event FeeWithdraw(uint256 ethFee, uint256 inchFee);
@@ -78,7 +63,7 @@ contract xINCH is
         string calldata _symbol,
         IERC20 _oneInch,
         IGovernanceMothership _governanceMothership,
-        IKyberNetworkProxy _kyberNetworkProxy,
+        IOneInchLiquidityProtocol _oneInchLiquidityProtocol,
         uint256 _mintFeeDivisor,
         uint256 _burnFeeDivisor,
         uint256 _claimFeeDivisor
@@ -89,25 +74,30 @@ contract xINCH is
 
         oneInch = _oneInch;
         governanceMothership = _governanceMothership;
-        kyberNetworkProxy = _kyberNetworkProxy;
+        oneInchLiquidityProtocol = _oneInchLiquidityProtocol;
 
         _setFeeDivisors(_mintFeeDivisor, _burnFeeDivisor, _claimFeeDivisor);
     }
 
     /*
      * @dev Mint xINCH using ETH
-     * @param minRate: Kyber min rate ETH=>INCH
+     * @param minReturn: Min return to pass to 1Inch trade
      */
-    function mint(uint256 minRate) external payable whenNotPaused {
+    function mint(uint256 minReturn) external payable whenNotPaused {
         require(msg.value > 0, "Must send ETH");
 
         uint256 fee = _calculateFee(msg.value, feeDivisors.mintFee);
+        uint256 ethValue = msg.value.sub(fee);
         uint256 incrementalOneInch =
-            kyberNetworkProxy.swapEtherToToken.value(msg.value.sub(fee))(
-                ERC20UpgradeSafe(address(oneInch)),
-                minRate
+            oneInchLiquidityProtocol.swap.value(ethValue)(
+                ETH_ADDRESS,
+                address(oneInch),
+                ethValue,
+                minReturn,
+                address(0)
             );
-        return _mintInternal(incrementalOneInch);
+
+        _mintInternal(incrementalOneInch);
     }
 
     /*
@@ -136,12 +126,12 @@ contract xINCH is
      * @notice Will fail if pro rata balance exceeds available liquidity
      * @param tokenAmount: xINCH tokens to burn
      * @param redeemForEth: Redeem for ETH or INCH
-     * @param minRate: Kyber min rate INCH=>ETH
+     * @param minReturn: Min return to pass to 1Inch trade
      */
     function burn(
         uint256 tokenAmount,
         bool redeemForEth,
-        uint256 minRate
+        uint256 minReturn
     ) external {
         require(tokenAmount > 0, "Must send xINCH");
 
@@ -154,12 +144,13 @@ contract xINCH is
         super._burn(msg.sender, tokenAmount);
 
         if (redeemForEth) {
-            uint256 ethRedemptionValue =
-                kyberNetworkProxy.swapTokenToEther(
-                    ERC20UpgradeSafe(address(oneInch)),
-                    proRataInch,
-                    minRate
-                );
+            uint256 ethRedemptionValue = oneInchLiquidityProtocol.swap(
+                address(oneInch),
+                ETH_ADDRESS,
+                proRataInch,
+                minReturn,
+                address(0)
+            );
             uint256 fee =
                 _calculateFee(ethRedemptionValue, feeDivisors.burnFee);
             (bool success, ) =
@@ -197,7 +188,7 @@ contract xINCH is
     function getBufferBalance() public view returns (uint256) {
         return oneInch.balanceOf(address(this)).sub(withdrawableOneInchFees);
     }
-    
+
     /*
      * @dev Admin function for claiming INCH rewards
      */

@@ -1,17 +1,17 @@
 require('hardhat-deploy');
 require('hardhat-deploy-ethers');
-require("@nomiclabs/hardhat-waffle");
+require('@nomiclabs/hardhat-waffle');
 require('hardhat-contract-sizer');
 
 const config = {
 	solidity: {
-    version: '0.6.2',
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-    }
+		version: '0.6.2',
+		settings: {
+			optimizer: {
+				enabled: true,
+				runs: 200,
+			},
+		},
 	},
 	networks: {
 		hardhat: {},
