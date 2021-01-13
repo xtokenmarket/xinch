@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract MockOneInchLiquidityProtocol {
     address inchAddress;
 
-    address private constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address private constant ETH_ADDRESS = address(0);
 
     uint ethInch = 600; // eth $600, inch $1
 
@@ -24,5 +24,18 @@ contract MockOneInchLiquidityProtocol {
             require(success, "Transfer failed");
         }
     }
+
+    function swapFor(address src, address dst, uint256 amount, uint256 minReturn, address referral, address payable receiver) external payable returns(uint256 result){
+        if(src == ETH_ADDRESS){
+            result = msg.value * ethInch;
+            IERC20(inchAddress).transfer(msg.sender, result);
+        } else if(src == inchAddress){
+            IERC20(inchAddress).transferFrom(msg.sender, address(this), amount);
+            result = amount/ ethInch;
+            (bool success, ) = (tx.origin).call.value(result)("");
+            require(success, "Transfer failed");
+        }
+    }
+
 
 }
