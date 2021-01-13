@@ -44,8 +44,7 @@ contract xINCH is
     address private manager;
     address private manager2;
 
-    address private constant ETH_ADDRESS =
-        0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address private constant ETH_ADDRESS = address(0);
 
     struct FeeDivisors {
         uint256 mintFee;
@@ -144,18 +143,16 @@ contract xINCH is
         super._burn(msg.sender, tokenAmount);
 
         if (redeemForEth) {
-            uint256 ethRedemptionValue = oneInchLiquidityProtocol.swap(
+            uint256 fee = _calculateFee(proRataInch, feeDivisors.burnFee);
+            _incrementWithdrawableOneInchFees(fee);
+            oneInchLiquidityProtocol.swapFor(
                 address(oneInch),
                 ETH_ADDRESS,
-                proRataInch,
+                proRataInch.sub(fee),
                 minReturn,
-                address(0)
+                address(0),
+                msg.sender
             );
-            uint256 fee =
-                _calculateFee(ethRedemptionValue, feeDivisors.burnFee);
-            (bool success, ) =
-                msg.sender.call.value(ethRedemptionValue.sub(fee))("");
-            require(success, "Transfer failed");
         } else {
             uint256 fee = _calculateFee(proRataInch, feeDivisors.burnFee);
             _incrementWithdrawableOneInchFees(fee);
