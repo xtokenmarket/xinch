@@ -34,8 +34,8 @@ async function main() {
 	};
 
 	await xinchProxyCast.initialize(
-    'xINCHa',
-    'Buchanan',
+		'xINCHa',
+		'Buchanan',
 		ADDRESSES.oneInch,
 		ADDRESSES.stakedInch,
 		ADDRESSES.oneInchLiquidityProtocol,
@@ -44,11 +44,11 @@ async function main() {
 		FEE_DIVISORS.CLAIM_FEE
 	);
 
-	await xinchProxyCast.approveInch(ADDRESSES.stakedInch); 
+	await xinchProxyCast.approveInch(ADDRESSES.stakedInch);
 	await xinchProxyCast.approveInch(ADDRESSES.oneInchLiquidityProtocol);
 
-	await xinchProxyCast.setFactoryGovernanceAddress(ADDRESSES.factoryGovernance); 
-	await xinchProxyCast.setGovernanceRewardsAddress(ADDRESSES.governanceRewards); 
+	await xinchProxyCast.setFactoryGovernanceAddress(ADDRESSES.factoryGovernance);
+	await xinchProxyCast.setGovernanceRewardsAddress(ADDRESSES.governanceRewards);
 	await xinchProxyCast.setExchangeGovernanceAddress(ADDRESSES.exchangeGovernance);
 
 	console.log('xinchProxyCast:', xinchProxyCast.address);
