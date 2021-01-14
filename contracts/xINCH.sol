@@ -54,12 +54,15 @@ contract xINCH is
 
     FeeDivisors public feeDivisors;
 
+    string public mandate;
+
     event Rebalance();
     event FeeDivisorsSet(uint256 mintFee, uint256 burnFee, uint256 claimFee);
     event FeeWithdraw(uint256 ethFee, uint256 inchFee);
 
     function initialize(
         string calldata _symbol,
+        string calldata _mandate,
         IERC20 _oneInch,
         IGovernanceMothership _governanceMothership,
         IOneInchLiquidityProtocol _oneInchLiquidityProtocol,
@@ -71,6 +74,8 @@ contract xINCH is
         __Ownable_init_unchained();
         __ERC20_init_unchained("xINCH", _symbol);
 
+        mandate = _mandate;
+        
         oneInch = _oneInch;
         governanceMothership = _governanceMothership;
         oneInchLiquidityProtocol = _oneInchLiquidityProtocol;

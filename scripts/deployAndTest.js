@@ -35,6 +35,7 @@ async function main() {
 
 	await xinchProxyCast.initialize(
 		'xINCHa',
+		'Buchanan',
 		ADDRESSES.oneInch,
 		ADDRESSES.stakedInch,
 		ADDRESSES.oneInchLiquidityProtocol,
