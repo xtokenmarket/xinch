@@ -14,8 +14,6 @@ import "./interface/IMooniswapPoolGovernance.sol";
 import "./interface/IMooniswapFactoryGovernance.sol";
 import "./interface/IOneInchLiquidityProtocol.sol";
 
-import "hardhat/console.sol";
-
 contract xINCH is
     Initializable,
     ERC20UpgradeSafe,
