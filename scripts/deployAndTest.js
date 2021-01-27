@@ -80,22 +80,27 @@ async function main() {
 	await xinchProxyCast.rebalance();
 
 	const totalSupply2 = await xinchProxyCast.totalSupply();
+	console.log('totalSupply2', totalSupply2.toString());
 	const supplyToBurn = await totalSupply2.div(50);
 
 	const inch = await ethers.getContractAt('ERC20', ADDRESSES.oneInch);
 
 	const xinchHoldings = await xinchProxyCast.balanceOf(deployer.address);
 	console.log('xinchHoldings', xinchHoldings.toString());
-	// const inchBal = await inch.balanceOf(deployer.address)
-	const ethBal = await ethers.provider.getBalance(deployer.address);
-	// console.log('inchBal', inchBal.toString())
-	console.log('ethBal', ethBal.toString());
-	// await xinchProxyCast.burn(supplyToBurn, false, '0')
-	await xinchProxyCast.burn(supplyToBurn, true, '0');
-	// const inchBalAfter = await inch.balanceOf(deployer.address)
-	const ethBalAfter = await ethers.provider.getBalance(deployer.address);
-	// console.log('inchBalAfter', inchBalAfter.toString())
-	console.log('ethBalAfter', ethBalAfter.toString());
+	
+	// ETH redemption
+	// const ethBal = await ethers.provider.getBalance(deployer.address);
+	// console.log('ethBal', ethBal.toString());
+	// await xinchProxyCast.burn(supplyToBurn, true, '0');
+	// const ethBalAfter = await ethers.provider.getBalance(deployer.address);
+	// console.log('ethBalAfter', ethBalAfter.toString());
+		
+	// INCH redemption
+	const inchBal = await inch.balanceOf(deployer.address)
+	console.log('inchBal', inchBal.toString())
+	await xinchProxyCast.burn(supplyToBurn, false, '0')
+	const inchBalAfter = await inch.balanceOf(deployer.address)
+	console.log('inchBalAfter', inchBalAfter.toString())
 }
 
 // We recommend this pattern to be able to use async/await everywhere

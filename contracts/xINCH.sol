@@ -75,7 +75,7 @@ contract xINCH is
         __ERC20_init_unchained("xINCH", _symbol);
 
         mandate = _mandate;
-        
+
         oneInch = _oneInch;
         governanceMothership = _governanceMothership;
         oneInchLiquidityProtocol = _oneInchLiquidityProtocol;
@@ -92,16 +92,16 @@ contract xINCH is
 
         uint256 fee = _calculateFee(msg.value, feeDivisors.mintFee);
         uint256 ethValue = msg.value.sub(fee);
-        uint256 incrementalOneInch =
-            oneInchLiquidityProtocol.swap.value(ethValue)(
-                ETH_ADDRESS,
-                address(oneInch),
-                ethValue,
-                minReturn,
-                address(0)
-            );
+        uint256 bufferBalanceBefore = getBufferBalance();
+        oneInchLiquidityProtocol.swap.value(ethValue)(
+            ETH_ADDRESS,
+            address(oneInch),
+            ethValue,
+            minReturn,
+            address(0)
+        );
 
-        _mintInternal(incrementalOneInch);
+        _mintInternal(getBufferBalance().sub(bufferBalanceBefore));
     }
 
     /*
@@ -123,6 +123,16 @@ contract xINCH is
             calculateMintAmount(_incrementalOneInch, totalSupply());
 
         return super._mint(msg.sender, mintAmount);
+    }
+
+    function calculateMintAmount(
+        uint256 incrementalOneInch,
+        uint256 totalSupply
+    ) public view returns (uint256 mintAmount) {
+        if (totalSupply == 0)
+            return incrementalOneInch.mul(INITIAL_SUPPLY_MULTIPLIER);
+        uint256 previousNav = getNav().sub(incrementalOneInch);
+        mintAmount = (incrementalOneInch).mul(totalSupply).div(previousNav);
     }
 
     /*
@@ -163,16 +173,6 @@ contract xINCH is
             _incrementWithdrawableOneInchFees(fee);
             oneInch.safeTransfer(msg.sender, proRataInch.sub(fee));
         }
-    }
-
-    function calculateMintAmount(
-        uint256 incrementalOneInch,
-        uint256 totalSupply
-    ) public view returns (uint256 mintAmount) {
-        if (totalSupply == 0)
-            return incrementalOneInch.mul(INITIAL_SUPPLY_MULTIPLIER);
-
-        mintAmount = (incrementalOneInch).mul(totalSupply).div(getNav());
     }
 
     /* ========================================================================================= */
