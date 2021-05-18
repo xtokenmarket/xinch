@@ -14,14 +14,11 @@ import "./interface/IMooniswapPoolGovernance.sol";
 import "./interface/IMooniswapFactoryGovernance.sol";
 import "./interface/IOneInchLiquidityProtocol.sol";
 
-import "./BlockLock.sol";
-
 contract xINCH is
     Initializable,
     ERC20UpgradeSafe,
     OwnableUpgradeSafe,
-    PausableUpgradeSafe,
-    BlockLock
+    PausableUpgradeSafe
 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -58,6 +55,24 @@ contract xINCH is
     FeeDivisors public feeDivisors;
 
     string public mandate;
+
+    //  BlockLock logic ; Implements locking of mint, burn, transfer and transferFrom
+    //  functions via a notLocked modifier
+    //  Functions are locked per address.
+    
+    // how many blocks are the functions locked for
+    uint256 private constant BLOCK_LOCK_COUNT = 6;
+    // last block for which this address is timelocked
+    mapping(address => uint256) public lastLockedBlock;
+
+    modifier notLocked(address lockedAddress) {
+        require(
+            lastLockedBlock[lockedAddress] <= block.number,
+            "Function is locked for this address"
+        );
+        _;
+        lastLockedBlock[lockedAddress] = block.number + BLOCK_LOCK_COUNT;
+    }
 
     event Rebalance();
     event FeeDivisorsSet(uint256 mintFee, uint256 burnFee, uint256 claimFee);
