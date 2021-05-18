@@ -56,6 +56,24 @@ contract xINCH is
 
     string public mandate;
 
+    //  BlockLock logic ; Implements locking of mint, burn, transfer and transferFrom
+    //  functions via a notLocked modifier
+    //  Functions are locked per address.
+    
+    // how many blocks are the functions locked for
+    uint256 private constant BLOCK_LOCK_COUNT = 6;
+    // last block for which this address is timelocked
+    mapping(address => uint256) public lastLockedBlock;
+
+    modifier notLocked(address lockedAddress) {
+        require(
+            lastLockedBlock[lockedAddress] <= block.number,
+            "Function is locked for this address"
+        );
+        _;
+        lastLockedBlock[lockedAddress] = block.number + BLOCK_LOCK_COUNT;
+    }
+
     event Rebalance();
     event FeeDivisorsSet(uint256 mintFee, uint256 burnFee, uint256 claimFee);
     event FeeWithdraw(uint256 ethFee, uint256 inchFee);
@@ -87,7 +105,12 @@ contract xINCH is
      * @dev Mint xINCH using ETH
      * @param minReturn: Min return to pass to 1Inch trade
      */
-    function mint(uint256 minReturn) external payable whenNotPaused {
+    function mint(uint256 minReturn)
+        external
+        payable
+        whenNotPaused
+        notLocked(msg.sender)
+    {
         require(msg.value > 0, "Must send ETH");
 
         uint256 fee = _calculateFee(msg.value, feeDivisors.mintFee);
@@ -108,7 +131,11 @@ contract xINCH is
      * @dev Mint xINCH using INCH
      * @param oneInchAmount: INCH tokens to contribute
      */
-    function mintWithToken(uint256 oneInchAmount) external whenNotPaused {
+    function mintWithToken(uint256 oneInchAmount)
+        external
+        whenNotPaused
+        notLocked(msg.sender)
+    {
         require(oneInchAmount > 0, "Must send token");
         oneInch.safeTransferFrom(msg.sender, address(this), oneInchAmount);
 
@@ -146,7 +173,7 @@ contract xINCH is
         uint256 tokenAmount,
         bool redeemForEth,
         uint256 minReturn
-    ) external {
+    ) external notLocked(msg.sender) {
         require(tokenAmount > 0, "Must send xINCH");
 
         uint256 stakedBalance = getStakedBalance();
@@ -173,6 +200,23 @@ contract xINCH is
             _incrementWithdrawableOneInchFees(fee);
             oneInch.safeTransfer(msg.sender, proRataInch.sub(fee));
         }
+    }
+
+    function transfer(address recipient, uint256 amount)
+        public
+        override
+        notLocked(msg.sender)
+        returns (bool)
+    {
+        return super.transfer(recipient, amount);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public override notLocked(sender) returns (bool) {
+        return super.transferFrom(sender, recipient, amount);
     }
 
     /* ========================================================================================= */
