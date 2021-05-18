@@ -16,10 +16,10 @@ const config = {
 	},
 	networks: {
 		hardhat: {
-			forking: {
-				url: process.env.ALCHEMY_KEY,
-				enabled: false
-			}
+			// forking: {
+			// 	url: process.env.ALCHEMY_KEY,
+			// 	enabled: false
+			// }
 		},
 	},
 	mocha: {
