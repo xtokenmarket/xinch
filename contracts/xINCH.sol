@@ -476,6 +476,7 @@ contract xINCH is
     }
 
     function approveInch(address _toApprove) external onlyOwnerOrManager {
+        require(_toApprove == address(oneInchLiquidityProtocol) || _toApprove == address(governanceMothership));
         oneInch.safeApprove(_toApprove, MAX_UINT);
     }
 
