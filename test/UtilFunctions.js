@@ -6,6 +6,7 @@ const {
   expectGreaterThan,
   expectEqual,
   increaseTime,
+  mineBlocks
 } = require("./utils");
 
 describe("xINCH: Util Functions", async () => {
@@ -40,6 +41,7 @@ describe("xINCH: Util Functions", async () => {
   });
 
   it("should not let non-admin unstake full quantity before liquidation period has elapsed", async () => {
+    await mineBlocks(5);
     await xinch.mint("0", { value: utils.parseEther("0.01") });
     await xinch.rebalance();
 

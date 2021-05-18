@@ -17,7 +17,8 @@ const config = {
 	networks: {
 		hardhat: {
 			forking: {
-				url: process.env.ALCHEMY_KEY
+				url: process.env.ALCHEMY_KEY,
+				enabled: false
 			}
 		},
 	},

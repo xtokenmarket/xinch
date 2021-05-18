@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { utils, BigNumber } = require("ethers");
 const { xInchFixture } = require("./fixtures");
-const { expectGreaterThanZero, expectGreaterThan } = require("./utils");
+const { expectGreaterThanZero, expectGreaterThan, mineBlocks } = require("./utils");
 
 describe("xINCH: MintBurn", async () => {
   const provider = ethers.provider;
@@ -46,7 +46,9 @@ describe("xINCH: MintBurn", async () => {
     const bnBal = BigNumber.from(xinchBal);
 
     const xinchToRedeem = bnBal.div(BigNumber.from(100));
+    await mineBlocks(5);
     await xinch.burn(xinchToRedeem.toString(), false, 0);
+    await mineBlocks(5);
 
     const inchBalAfter = await inch.balanceOf(deployer.address);
     expectGreaterThan(inchBalAfter, inchBalBefore);
@@ -54,12 +56,14 @@ describe("xINCH: MintBurn", async () => {
 
   it("should burn xINCH tokens for ETH", async () => {
     await xinch.mint("0", { value: utils.parseEther("0.1") });
+    await mineBlocks(5);
     const ethBalBefore = await provider.getBalance(deployer.address);
     const xinchBal = await xinch.balanceOf(deployer.address);
     const bnBal = BigNumber.from(xinchBal);
 
     const xinchToRedeem = bnBal.div(BigNumber.from(100));
     await xinch.burn(xinchToRedeem.toString(), true, 0);
+    await mineBlocks(5);
 
     const ethBalAfter = await provider.getBalance(deployer.address);
     expectGreaterThan(ethBalAfter, ethBalBefore);

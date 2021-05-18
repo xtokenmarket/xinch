@@ -14,11 +14,14 @@ import "./interface/IMooniswapPoolGovernance.sol";
 import "./interface/IMooniswapFactoryGovernance.sol";
 import "./interface/IOneInchLiquidityProtocol.sol";
 
+import "./BlockLock.sol";
+
 contract xINCH is
     Initializable,
     ERC20UpgradeSafe,
     OwnableUpgradeSafe,
-    PausableUpgradeSafe
+    PausableUpgradeSafe,
+    BlockLock
 {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
@@ -87,7 +90,12 @@ contract xINCH is
      * @dev Mint xINCH using ETH
      * @param minReturn: Min return to pass to 1Inch trade
      */
-    function mint(uint256 minReturn) external payable whenNotPaused {
+    function mint(uint256 minReturn)
+        external
+        payable
+        whenNotPaused
+        notLocked(msg.sender)
+    {
         require(msg.value > 0, "Must send ETH");
 
         uint256 fee = _calculateFee(msg.value, feeDivisors.mintFee);
@@ -108,7 +116,11 @@ contract xINCH is
      * @dev Mint xINCH using INCH
      * @param oneInchAmount: INCH tokens to contribute
      */
-    function mintWithToken(uint256 oneInchAmount) external whenNotPaused {
+    function mintWithToken(uint256 oneInchAmount)
+        external
+        whenNotPaused
+        notLocked(msg.sender)
+    {
         require(oneInchAmount > 0, "Must send token");
         oneInch.safeTransferFrom(msg.sender, address(this), oneInchAmount);
 
@@ -146,7 +158,7 @@ contract xINCH is
         uint256 tokenAmount,
         bool redeemForEth,
         uint256 minReturn
-    ) external {
+    ) external notLocked(msg.sender) {
         require(tokenAmount > 0, "Must send xINCH");
 
         uint256 stakedBalance = getStakedBalance();
@@ -173,6 +185,23 @@ contract xINCH is
             _incrementWithdrawableOneInchFees(fee);
             oneInch.safeTransfer(msg.sender, proRataInch.sub(fee));
         }
+    }
+
+    function transfer(address recipient, uint256 amount)
+        public
+        override
+        notLocked(msg.sender)
+        returns (bool)
+    {
+        return super.transfer(recipient, amount);
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public override notLocked(sender) returns (bool) {
+        return super.transferFrom(sender, recipient, amount);
     }
 
     /* ========================================================================================= */

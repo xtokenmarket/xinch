@@ -56,6 +56,7 @@ async function main() {
 	// test
 
 	await xinchProxyCast.mint('1', { value: ethers.utils.parseEther('0.01') });
+	await mineBlocks(5);
 	const totalSupply = await xinchProxyCast.totalSupply();
 	console.log('totalSupply', totalSupply.toString());
 
@@ -69,6 +70,7 @@ async function main() {
 	console.log('bufferBal', bufferBal.toString());
 
 	await xinchProxyCast.mint('1', { value: ethers.utils.parseEther('1') });
+	await mineBlocks(5);
 
 	const nav1 = await xinchProxyCast.getNav();
 	console.log('nav1', nav1.toString());
@@ -102,6 +104,17 @@ async function main() {
 	const inchBalAfter = await inch.balanceOf(deployer.address)
 	console.log('inchBalAfter', inchBalAfter.toString())
 }
+
+/**
+ * Mine several blocks in network
+ * @param {Number} blockCount how many blocks to mine
+ */
+ async function mineBlocks(blockCount) {
+	for(let i = 0 ; i < blockCount ; ++i) {
+		await hre.ethers.provider.send("evm_mine");
+	}
+  }
+  
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.

@@ -1,7 +1,7 @@
 const { expect, assert } = require('chai');
 const { utils, BigNumber } = require('ethers');
 const { xInchFixture } = require('./fixtures');
-const { expectGreaterThanZero, expectGreaterThan, expectEqual } = require('./utils');
+const { expectGreaterThanZero, expectGreaterThan, expectEqual, mineBlocks } = require('./utils');
 
 describe("xINCH: Rebalance", async() => {
     let xinch
@@ -42,6 +42,7 @@ describe("xINCH: Rebalance", async() => {
     });
     
     it('should allow non-admin to use external rebalance function', async () => {
+        await mineBlocks(5);
         await xinch.mint('0', { value: utils.parseEther('0.01') });
         await xinch.connect(user1).rebalanceExternal()
         
