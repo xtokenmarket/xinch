@@ -33,14 +33,12 @@ describe("xINCH: BlockLock", async () => {
         to.be.reverted;
   }),
 
-  it('account shouldn\'t be able to call transfer, mint and burn before 6 blocks have been mined', async () => {
+  it('account shouldn\'t be able to call burn, mint and transfer before 6 blocks have been mined', async () => {
     const amount = utils.parseEther('0.01');
-    await xinch.transfer(user1.address, amount);
+    await xinch.burn(amount, true, 0);
     await expect(xinch.mint(0, { value: amount })).
         to.be.reverted;
     await expect(xinch.mintWithToken(amount)).
-        to.be.reverted;
-    await expect(xinch.burn(amount, true, 0)).
         to.be.reverted;
     await expect(xinch.transfer(user1.address, amount)).
         to.be.reverted;
@@ -51,6 +49,17 @@ describe("xINCH: BlockLock", async () => {
     await xinch.approve(user1.address, 1);
     await xinch.approve(user2.address, 1);
     await xinch.mint('0', { value: utils.parseEther('0.01') });
+    await expect(xinch.connect(user1).transferFrom(deployer.address, user1.address, 1)).
+        to.be.reverted;
+    await expect(xinch.connect(user2).transferFrom(deployer.address, user1.address, 1)).
+        to.be.reverted;
+  }),
+
+  it(`no account should be able to call transferFrom from sender address
+        which has called burn before 6 blocks have been mined`, async () => {
+    await xinch.approve(user1.address, 1);
+    await xinch.approve(user2.address, 1);
+    await xinch.burn(1, true, 0);
     await expect(xinch.connect(user1).transferFrom(deployer.address, user1.address, 1)).
         to.be.reverted;
     await expect(xinch.connect(user2).transferFrom(deployer.address, user1.address, 1)).
