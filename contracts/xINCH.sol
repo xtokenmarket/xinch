@@ -55,24 +55,11 @@ contract xINCH is
     FeeDivisors public feeDivisors;
 
     string public mandate;
-
-    //  BlockLock logic ; Implements locking of mint, burn, transfer and transferFrom
-    //  functions via a notLocked modifier
-    //  Functions are locked per address.
     
-    // how many blocks are the functions locked for
+    // addresses are locked from transfer after minting or burning
     uint256 private constant BLOCK_LOCK_COUNT = 6;
     // last block for which this address is timelocked
     mapping(address => uint256) public lastLockedBlock;
-
-    modifier notLocked(address lockedAddress) {
-        require(
-            lastLockedBlock[lockedAddress] <= block.number,
-            "Function is locked for this address"
-        );
-        _;
-        lastLockedBlock[lockedAddress] = block.number + BLOCK_LOCK_COUNT;
-    }
 
     event Rebalance();
     event FeeDivisorsSet(uint256 mintFee, uint256 burnFee, uint256 claimFee);
@@ -112,6 +99,7 @@ contract xINCH is
         notLocked(msg.sender)
     {
         require(msg.value > 0, "Must send ETH");
+        lock(msg.sender);
 
         uint256 fee = _calculateFee(msg.value, feeDivisors.mintFee);
         uint256 ethValue = msg.value.sub(fee);
@@ -137,6 +125,7 @@ contract xINCH is
         notLocked(msg.sender)
     {
         require(oneInchAmount > 0, "Must send token");
+        lock(msg.sender);
         oneInch.safeTransferFrom(msg.sender, address(this), oneInchAmount);
 
         uint256 fee = _calculateFee(oneInchAmount, feeDivisors.mintFee);
@@ -175,6 +164,7 @@ contract xINCH is
         uint256 minReturn
     ) external notLocked(msg.sender) {
         require(tokenAmount > 0, "Must send xINCH");
+        lock(msg.sender);
 
         uint256 stakedBalance = getStakedBalance();
         uint256 bufferBalance = getBufferBalance();
@@ -514,6 +504,27 @@ contract xINCH is
             "Non-admin caller"
         );
         _;
+    }
+
+    /**
+     *  BlockLock logic: Implements locking of mint, burn, transfer and transferFrom
+     *  functions via a notLocked modifier.
+     *  Functions are locked per address.
+     */
+    modifier notLocked(address lockedAddress) {
+        require(
+            lastLockedBlock[lockedAddress] <= block.number,
+            "Function is temporarily locked for this address"
+        );
+        _;
+    }
+
+    /**
+     * @dev Lock mint, burn, transfer and transferFrom functions
+     *      for _address for BLOCK_LOCK_COUNT blocks
+     */
+    function lock(address _address) private {
+        lastLockedBlock[_address] = block.number + BLOCK_LOCK_COUNT;
     }
 
     receive() external payable {
