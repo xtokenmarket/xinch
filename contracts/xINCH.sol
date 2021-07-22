@@ -8,6 +8,7 @@ import "@openzeppelin/contracts-ethereum-package/contracts/Initializable.sol";
 import "@openzeppelin/contracts-ethereum-package/contracts/utils/Pausable.sol";
 
 import "./interface/IGovernanceRewards.sol";
+import "./interface/IDelegateRegistry.sol";
 import "./interface/IExchangeGovernance.sol";
 import "./interface/IGovernanceMothership.sol";
 import "./interface/IMooniswapPoolGovernance.sol";
@@ -55,7 +56,7 @@ contract xINCH is
     FeeDivisors public feeDivisors;
 
     string public mandate;
-    
+
     // addresses are locked from transfer after minting or burning
     uint256 private constant BLOCK_LOCK_COUNT = 6;
     // last block for which this address is timelocked
@@ -404,6 +405,14 @@ contract xINCH is
         IMooniswapPoolGovernance(pool).decayPeriodVote(vote);
     }
 
+    function setDelegate(
+        address delegateRegistry,
+        bytes32 id,
+        address delegate
+    ) external onlyOwnerOrManager {
+        IDelegateRegistry(delegateRegistry).setDelegate(id, delegate);
+    }
+
     /* ========================================================================================= */
     /*                                              Utils                                        */
     /* ========================================================================================= */
@@ -466,7 +475,10 @@ contract xINCH is
     }
 
     function approveInch(address _toApprove) external onlyOwnerOrManager {
-        require(_toApprove == address(oneInchLiquidityProtocol) || _toApprove == address(governanceMothership));
+        require(
+            _toApprove == address(oneInchLiquidityProtocol) ||
+                _toApprove == address(governanceMothership)
+        );
         oneInch.safeApprove(_toApprove, MAX_UINT);
     }
 
